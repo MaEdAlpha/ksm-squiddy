@@ -3,7 +3,9 @@
   "chainVersions": "kusamaVersions.json",
   "typesBundle": "kusama",
   "events": [
-    "balances.Transfer"
+    "system.Remarked"
   ],
-  "calls": []
+  "calls": [
+    "system.remark"
+  ]
 }

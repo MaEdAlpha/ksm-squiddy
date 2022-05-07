@@ -16,7 +16,26 @@ processor.setDataSource({
   chain: "wss://kusama-rpc.polkadot.io",
 });
 
-processor.addEventHandler("balances.Transfer", async (ctx) => {
+function getTransferEvent(ctx: EventHandlerContext): TransferEvent {
+  const event = new BalancesTransferEvent(ctx);
+  if (event.isV1020) {
+    const [from, to, amount] = event.asV1020;
+    return { from, to, amount };
+  }
+  if (event.isV1050) {
+    const [from, to, amount] = event.asV1050;
+    return { from, to, amount };
+  }
+  if (event.isV9130) {
+    const { from, to, amount } = event.asV9130;
+    return { from, to, amount };
+  }
+  return event.asLatest;
+}
+
+processor.setBlockRange({from: 12000000});
+
+processor.addEventHandler("system.Remarked", async (ctx) => {
   const transfer = getTransferEvent(ctx);
   const tip = ctx.extrinsic?.tip || 0n;
   const from = ss58.codec("kusama").encode(transfer.from);
@@ -60,21 +79,16 @@ interface TransferEvent {
   amount: bigint;
 }
 
-function getTransferEvent(ctx: EventHandlerContext): TransferEvent {
-  const event = new BalancesTransferEvent(ctx);
-  if (event.isV1020) {
-    const [from, to, amount] = event.asV1020;
-    return { from, to, amount };
+function stringifyArray(list: any[]): any[] {
+  let listStr : any[] = [];
+  list = list[0]
+  for (let vec of list){
+    for (let i = 0; i < vec.length; i++){
+      vec[i] = String(vec[i]);
+    }
+    listStr.push(vec);
   }
-  if (event.isV1050) {
-    const [from, to, amount] = event.asV1050;
-    return { from, to, amount };
-  }
-  if (event.isV9130) {
-    const { from, to, amount } = event.asV9130;
-    return { from, to, amount };
-  }
-  return event.asLatest;
+  return listStr
 }
 
 async function getOrCreate<T extends { id: string }>(
